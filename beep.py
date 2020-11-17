@@ -10,7 +10,13 @@ import json
 import requests
 import time
 from sseclient import SSEClient
+import logging
 
+logger = logging.getLogger('discord')
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -43,8 +49,8 @@ def process_message(data, posted, cb):
 def listen(cb):
   posted = {}
   starting = time.time()
-  # url = 'https://cwtsite.com/api/message/listen'
-  url = 'http://localhost:9000/api/message/listen'
+  url = 'https://cwtsite.com/api/message/listen'
+  # url = 'http://localhost:9000/api/message/listen'
   while 1:
     log('', 'looping')
     messages = SSEClient(requests.get(url, stream=True))
@@ -115,8 +121,8 @@ async def on_message(message):
 
 
 def log(prefix, s):
-  timestamp = time.strftime("%Y-%m-%d %X")
-  print("[%s] - %s - %s" % (timestamp, prefix, s));
+  logger.info("APP - %s - %s" % (prefix, s))
+
 
 client.run(TOKEN)
 
