@@ -1,5 +1,8 @@
 # bot.py
+import threading
 import os
+import re
+import threading
 import subprocess
 import discord
 from dotenv import load_dotenv
@@ -14,43 +17,57 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 SCRIPT = os.getenv('SCRIPT') or './'
 LISTEN = os.getenv('LISTEN') == "1"
 client = discord.Client()
+listening = False
 
 
-async def listen():
+def process_message(data, posted, cb):
+  args = arguments(data)
+  log('args', args)
+  node = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8')
+  for channel in get_channels():
+    if channel.id not in posted:
+      posted[channel.id] = []
+    if data["id"] in posted[channel.id]:
+      log('message already received', channel.id)
+      continue
+    else:
+      if data["newsType"] == "DISCORD_MESSAGE" and re.search(r"\b%s\b" % channel.id, data["body"].split(',')[1]): 
+        log('Discarding message sent from this same channel', str(channel.id));
+        continue
+      log(channel.id, 'sending to channel: ' + str(node))
+      # await client.get_channel(channel.id).send(node)
+      cb(channel.id, node)
+      posted[channel.id].append(data["id"])
+
+
+def listen(cb):
   posted = {}
   starting = time.time()
-  url = 'https://cwtsite.com/api/message/listen'
-  # url = 'http://localhost:9000/api/message/listen'
-  messages = SSEClient(requests.get(url, stream=True))
-  for msg in messages.events():
-    data = json.loads(msg.data)
-    log('msg', data)
-    if time.time() - starting <= 3:
-      for channel in get_channels():
-        if channel.id not in posted:
-          posted[channel.id] = []
-        posted[channel.id].append(data["id"])
-      log('', "discarding as probable initial batch")
-      continue
-    args = arguments(data)
-    log('args', args)
-    node = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8')
-    log('node', node)
-    for channel in get_channels():
-      if channel.id not in posted:
-        posted[channel.id] = []
-      if data["id"] in posted[channel.id]:
-        log('message already sent', channel.id)
+  # url = 'https://cwtsite.com/api/message/listen'
+  url = 'http://localhost:9000/api/message/listen'
+  while 1:
+    log('', 'looping')
+    messages = SSEClient(requests.get(url, stream=True))
+    for msg in messages.events():
+      data = json.loads(msg.data)
+      log('EVENT', data)
+      if time.time() - starting <= 5:
+        for channel in get_channels():
+          if channel.id not in posted:
+            posted[channel.id] = []
+          posted[channel.id].append(data["id"])
+        log('', "discarding as probable part of initial batch")
       else:
-        log('sending to channel', channel.id)
-        await client.get_channel(channel.id).send(node)
-        posted[channel.id].append(data["id"])
+        # await process_message(data, posted)
+        process_message(data, posted, cb)
+    log('', 'out of loopery')
 
 
 def get_channels():
   for guild in client.guilds:
     for channel in guild.text_channels:
       yield channel
+
 
 def arguments(data):
   category = data["category"]
@@ -61,17 +78,17 @@ def arguments(data):
   return list(filter(lambda x: x is not None, arr));
 
 
-def log(prefix, s):
-  timestamp = time.strftime("%Y-%m-%d %X")
-  print("[%s] - %s - %s" % (timestamp, prefix, s));
+def send_message(channelId, message):
+  client.loop.create_task(client.get_channel(channelId).send(message))
 
 
 @client.event
 async def on_ready():
-  log('', 'logged in')
+  log('', 'ready')
   if LISTEN:
-    log('listen', 'yes')
-    await listen()
+    t = threading.Thread(target=listen, args=(send_message,))
+    t.start()
+    log('listen thread started', 'continuing')
   else:
     log('not listening', 'listen by setting env LISTEN to 1')
 
@@ -80,18 +97,26 @@ async def on_ready():
 async def on_message(message):
   if message.author == client.user:
     return
-  if message.content.strip() == '!cwt':
+  cmd = message.content.strip()
+  log('on message', cmd)
+  if cmd == '!cwt':
     await message.channel.send("Beep Bop CWT Bot. I act upon commands (see !cwtcommands) but I also mirror the CWT chat.")
     return
+  link = 'https://discord.com/channels/' + str(message.channel.id)
   node = subprocess.run(
-      ["node", SCRIPT + 'handle.js', message.author.display_name, message.content.strip()],
+      ["node", SCRIPT + 'handle.js', 'DISCORD', link, message.author.display_name, cmd],
       stdout=subprocess.PIPE).stdout.decode('utf8')
   try:
     result = list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
+    log('responding', result)
     await message.channel.send(result)
   except:
-    log(message.content, "did not yield a result")
+    log(cmd, "did not yield a result")
 
+
+def log(prefix, s):
+  timestamp = time.strftime("%Y-%m-%d %X")
+  print("[%s] - %s - %s" % (timestamp, prefix, s));
 
 client.run(TOKEN)
 
