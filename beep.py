@@ -122,7 +122,7 @@ async def on_message(message):
 
 
 def log(prefix, s):
-  logger.info("APP - %s - %s" % (prefix, s))
+  logger.info("APP - %s - %s" % (str(prefix), str(s)))
 
 
 client.run(TOKEN)
