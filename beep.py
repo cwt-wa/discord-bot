@@ -8,7 +8,6 @@ import discord
 from dotenv import load_dotenv
 import json
 import requests
-import time
 from sseclient import SSEClient
 import logging
 
@@ -22,7 +21,6 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 SCRIPT = os.getenv('SCRIPT') or './'
 LISTEN = os.getenv('LISTEN') == "1"
-LISTEN_DELAY = int(os.getenv('LISTEN_DELAY') or 5)
 client = discord.Client()
 listening = False
 
@@ -48,7 +46,6 @@ def process_message(data, posted, cb):
 
 def listen(cb):
   posted = {}
-  starting = time.time()
   url = 'https://cwtsite.com/api/message/listen'
   # url = 'http://localhost:9000/api/message/listen'
   while 1:
@@ -59,14 +56,7 @@ def listen(cb):
         continue
       data = json.loads(msg.data)
       log('EVENT', data)
-      if time.time() - starting <= LISTEN_DELAY:
-        for channel in get_channels():
-          if channel.id not in posted:
-            posted[channel.id] = []
-          posted[channel.id].append(data["id"])
-        log('', "discarding as probable part of initial batch")
-      else:
-        process_message(data, posted, cb)
+      process_message(data, posted, cb)
     log('', 'out of loopery')
 
 
