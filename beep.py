@@ -22,6 +22,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 SCRIPT = os.getenv('SCRIPT') or './'
 LISTEN = os.getenv('LISTEN') == "1"
+LISTEN_DELAY = int(os.getenv('LISTEN_DELAY') or 5)
 client = discord.Client()
 listening = False
 
@@ -57,7 +58,7 @@ def listen(cb):
     for msg in messages.events():
       data = json.loads(msg.data)
       log('EVENT', data)
-      if time.time() - starting <= 5:
+      if time.time() - starting <= LISTEN_DELAY:
         for channel in get_channels():
           if channel.id not in posted:
             posted[channel.id] = []
