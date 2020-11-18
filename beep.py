@@ -42,7 +42,6 @@ def process_message(data, posted, cb):
         log('Discarding message sent from this same channel', str(channel.id));
         continue
       log(channel.id, 'sending to channel: ' + str(node))
-      # await client.get_channel(channel.id).send(node)
       cb(channel.id, node)
       posted[channel.id].append(data["id"])
 
@@ -56,6 +55,8 @@ def listen(cb):
     log('', 'looping')
     messages = SSEClient(requests.get(url, stream=True))
     for msg in messages.events():
+      if msg.event != "EVENT":
+        continue
       data = json.loads(msg.data)
       log('EVENT', data)
       if time.time() - starting <= LISTEN_DELAY:
@@ -65,7 +66,6 @@ def listen(cb):
           posted[channel.id].append(data["id"])
         log('', "discarding as probable part of initial batch")
       else:
-        # await process_message(data, posted)
         process_message(data, posted, cb)
     log('', 'out of loopery')
 
