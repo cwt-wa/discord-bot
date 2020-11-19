@@ -119,7 +119,6 @@ class Listener:
         yield channel
 
 
-
 class NodeRunner:
 
   def __init__(self, script, runner):
@@ -128,9 +127,9 @@ class NodeRunner:
     import subprocess
 
 
-  def handle(self, cmd, display_name, channel):
-    link = ('https://discord.com/channels/%s/%s' % (str(channel.guild.id), str(channel.id)))
-    arguments = ["node", self.env.script + 'handle.js', 'DISCORD', link, display_name, cmd]
+  def handle(self, cmd, display_name, guildId, channelId):
+    link = ('https://discord.com/channels/%s/%s' % (str(guildId), str(channelId)))
+    arguments = ["node", self.script + 'handle.js', 'DISCORD', link, display_name, cmd]
     node = self.runner(arguments)
     return list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
 
@@ -181,7 +180,9 @@ if __name__ == "__main__":
     elif cmd.startswith("!cwt"):
       logger.info("commands starts with !cwt")
       try:
-        result = node_runner.handle(cmd, message.author.display_name, message.channel)
+        result = node_runner.handle(
+            cmd, message.author.display_name,
+            message.channel.guild.id,  message.channel.id)
         logger.info("sending node result: %s", result)
         await message.channel.send(result)
       except:

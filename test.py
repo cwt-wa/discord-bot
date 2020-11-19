@@ -67,7 +67,7 @@ class NodeRunnerTest(unittest.TestCase):
   def setUpClass(cls):
     pass
 
-  def format_shoutbox(self):
+  def test_format_shoutbox(self):
     script = "~/with/trailing/slash/"
     node_runner = NodeRunner(script, lambda x: x)
     message = {
@@ -76,14 +76,14 @@ class NodeRunnerTest(unittest.TestCase):
       "body": "Here is a message",
       "newsType": None
     }
-    actual = self.node_runner.format(message)
+    actual = node_runner.format(message)
     self.assertEqual(
         actual,
         ["node", script + "format.js", message["category"], 
          message["author"]["username"], message["body"]])
   
 
-  def format_news(self):
+  def test_format_news(self):
     script = "../src/no/trailing/slash"
     node_runner = NodeRunner(script, lambda x: x)
     message = {
@@ -92,13 +92,32 @@ class NodeRunnerTest(unittest.TestCase):
       "body": "BoolC,Taner,3,1",
       "newsType": "REPORT"
     }
-    actual = self.node_runner.format(message)
+    actual = node_runner.format(message)
     self.assertEqual(
         actual,
         ["node", script + "/format.js", message["category"], 
          message["author"]["username"], message["body"], message["newsType"]])
 
-  # TODO test command
+
+  def test_handle(self):
+    script = "../src/no/trailing/slash"
+    guildId = 1234
+    channelId = 12345
+    node = \
+        "The CWT bot commands are !cwtchat, !cwtdice, !cwthell, !cwtterrain, " \
+        "!cwtwinners, !cwtcommands, !cwtschedule, !cwtplayoffs, " \
+        "!cwtwhatisthisthing, !cwtrafkagrass, !cwturl, !cwtgithub."
+    def runner(arguments):
+      link = 'https://discord.com/channels/1234/12345'
+      self.assertEqual(
+          arguments,
+          ["node", script + "/handle.js", "DISCORD", link, "Zemke", "!cwtcommands"])
+      return "getting current tournament\n" \
+             "cmd !cwtcommands\n" \
+             "RES xx %s\n" % node
+    node_runner = NodeRunner(script, runner)
+    actual = node_runner.handle("!cwtcommands", "Zemke", guildId, channelId)
+    self.assertEqual(actual, node)
 
 
 class ListenerTest(unittest.TestCase):
