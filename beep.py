@@ -21,6 +21,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 SCRIPT = os.getenv('SCRIPT') or './'
 LISTEN = os.getenv('LISTEN') == "1"
+CHANNEL = os.getenv('CHANNEL')
 client = discord.Client()
 listening = False
 
@@ -39,9 +40,10 @@ def process_message(data, posted, cb):
       if data["newsType"] == "DISCORD_MESSAGE" and re.search(r"\b%s\b" % channel.id, data["body"].split(',')[1]): 
         log('Discarding message sent from this same channel', str(channel.id));
         continue
-      log(channel.id, 'sending to channel: ' + str(node))
-      cb(channel.id, node)
-      posted[channel.id].append(data["id"])
+      if CHANNEL is None or CHANNEL == channel.id:
+        log(channel.id, 'sending to channel: ' + str(node))
+        cb(channel.id, node)
+        posted[channel.id].append(data["id"])
 
 
 def listen(cb):
