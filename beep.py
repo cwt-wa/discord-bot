@@ -18,24 +18,41 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-SCRIPT = os.getenv('SCRIPT') or './'
-LISTEN = os.getenv('LISTEN') == "1"
-CHANNEL = int(os.getenv('CHANNEL')) if os.getenv('CHANNEL') is not None else None
-
-client = discord.Client()
 
 
 def log(prefix, s):
   logger.info("APP - %s - %s" % (str(prefix), str(s)))
 
 
+class Env:
+  
+  def __init__(self, getenv):
+    self.token = getenv('DISCORD_TOKEN')
+    self.script = getenv('SCRIPT') or './'
+    self.listen = getenv('LISTEN') == "1"
+    self.channel = int(getenv('CHANNEL')) if getenv('CHANNEL') is not None else None
+
+
 class BeepBoop:
 
-  def __init__(self, client, url):
+  def __init__(self, client, url, getenv):
     self.client = client
-    self.client.run(TOKEN)
     self.url = url
+    self.env = Env(getenv)
+    self.client.run(self.env.token)
+    if self.env.listen:
+      log('APP', 'you wanted me to listen, I listen')
+      t = threading.Thread(target=self.listen, args=(self.send_message,))
+      t.start()
+      log('APP', "listen thread started")
+      if self.env.channel is not None:
+        log('APP', 'mirroring CWT chat to channel %s only.' % self.env.channel)
+      else:
+        log('APP', 'mirroring CWT chat to all channels on server.')
+    else:
+      log('not listening', 'listen by setting env LISTEN to 1')
+      if self.env.channel is not None:
+        log('APP', 'CHANNEL env is set, but you\'re not listening')
 
 
   def process_message(self, data, posted, cb):
@@ -53,7 +70,7 @@ class BeepBoop:
               re.search(r"\b%s\b" % channel.id, data["body"].split(',')[1]): 
           log('Discarding message sent from this same channel', str(channel.id));
           continue
-        if CHANNEL is None or CHANNEL == channel.id:
+        if self.env.channel is None or self.env.channel == channel.id:
           log(channel.id, 'sending to channel: ' + str(node))
           cb(channel.id, node)
           posted[channel.id].append(data["id"])
@@ -78,7 +95,7 @@ class BeepBoop:
     username = data["author"]["username"]
     body = data["body"]
     newsType = data["newsType"]
-    arr = ["node", SCRIPT + 'format.js', category, username, body, newsType]
+    arr = ["node", self.env.script + 'format.js', category, username, body, newsType]
     return list(filter(lambda x: x is not None, arr));
 
 
@@ -92,43 +109,35 @@ class BeepBoop:
         yield channel
 
 
-@client.event
-async def on_ready():
-  # url = 'http://localhost:9000/api/message/listen'
-  url = 'https://cwtsite.com/api/message/listen'
-  beepBoop = BeepBoop(client, url)
-  log('', 'ready')
-  if CHANNEL is not None:
-    log('APP', 'mirroring CWT chat to channel %s only.' % CHANNEL)
-  else:
-    log('APP', 'mirroring CWT chat to all channels on server.')
-  if LISTEN:
-    t = threading.Thread(target=listen, args=(send_message,))
-    t.start()
-    log('listen thread started', 'continuing')
-  else:
-    log('not listening', 'listen by setting env LISTEN to 1')
+if __name__ == "__main__":
+  beepBoop = BeepBoop(discord.Client(), url)
+
+  @beepBop.client.event
+  async def on_ready():
+    # url = 'http://localhost:9000/api/message/listen'
+    url = 'https://cwtsite.com/api/message/listen'
+    log('', 'ready')
 
 
-@client.event
-async def on_message(message):
-  if message.author == client.user:
-    return
-  cmd = message.content.strip()
-  log('on message', cmd)
-  if cmd == '!cwt':
-    await message.channel.send(
-        "Beep Bop CWT Bot. I act upon commands (see !cwtcommands)"
-        " but I also mirror the CWT chat.")
-    return
-  link = 'https://discord.com/channels/' + str(message.channel.id)
-  node = subprocess.run(
-      ["node", SCRIPT + 'handle.js', 'DISCORD', link, message.author.display_name, cmd],
-      stdout=subprocess.PIPE).stdout.decode('utf8')
-  try:
-    result = list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
-    log('responding', result)
-    await message.channel.send(result)
-  except:
-    log(cmd, "did not yield a result")
+  @beepBop.client.event
+  async def on_message(message):
+    if message.author == client.user:
+      return
+    cmd = message.content.strip()
+    log('on message', cmd)
+    if cmd == '!cwt':
+      await message.channel.send(
+          "Beep Bop CWT Bot. I act upon commands (see !cwtcommands)"
+          " but I also mirror the CWT chat.")
+      return
+    link = 'https://discord.com/channels/' + str(message.channel.id)
+    node = subprocess.run(
+        ["node", self.env.script + 'handle.js', 'DISCORD', link, message.author.display_name, cmd],
+        stdout=subprocess.PIPE).stdout.decode('utf8')
+    try:
+      result = list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
+      log('responding', result)
+      await message.channel.send(result)
+    except:
+      log(cmd, "did not yield a result")
 
