@@ -25,11 +25,6 @@ CHANNEL = int(os.getenv('CHANNEL')) if os.getenv('CHANNEL') is not None else Non
 client = discord.Client()
 listening = False
 
-if channel is not None:
-  log('APP', 'mirroring CWT chat to channel %s only.' % CHANNEL)
-else:
-  log('APP', 'mirroring CWT chat to all channels on server.')
-
 def process_message(data, posted, cb):
   args = arguments(data)
   log('args', args)
@@ -88,6 +83,10 @@ def send_message(channelId, message):
 @client.event
 async def on_ready():
   log('', 'ready')
+  if CHANNEL is not None:
+    log('APP', 'mirroring CWT chat to channel %s only.' % CHANNEL)
+  else:
+    log('APP', 'mirroring CWT chat to all channels on server.')
   if LISTEN:
     t = threading.Thread(target=listen, args=(send_message,))
     t.start()
