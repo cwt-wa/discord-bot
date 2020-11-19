@@ -23,7 +23,7 @@ class TestSum(unittest.TestCase):
     client_mock.run.assert_called_once_with(env["DISCORD_TOKEN"])
   
 
-  def test_arguments_shotbox(self):
+  def test_arguments_shoutbox(self):
     client_mock = Mock()
     env = {"SCRIPT": "fdasfdsa/"}
     beepBoop = BeepBoop(client_mock, 'localhost', Env(env).getenv)
