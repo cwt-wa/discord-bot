@@ -3,7 +3,6 @@ from operator import itemgetter
 import os
 import re
 import threading
-import subprocess
 import discord
 from dotenv import load_dotenv
 import json
@@ -48,21 +47,12 @@ class BeepBoop:
     if self.env.listen:
       log('APP', 'you wanted me to listen, I listen')
       listener = listener_factory([self.client, self.env.channel])
-      thread = thread_factory.inst(listener.listen, (self.send_message,))
+      thread = thread_factory.inst(listener.listen, (-1, self.send_message))
       thread.start()
     else:
       log('not listening', 'listen by setting env LISTEN to 1')
       if self.env.channel is not None:
         log('APP', 'CHANNEL env is set, but you\'re not listening')
-
-
-  def arguments(self, data):
-    category = data["category"]
-    username = data["author"]["username"]
-    body = data["body"]
-    newsType = data["newsType"]
-    arr = ["node", self.env.script + 'format.js', category, username, body, newsType]
-    return list(filter(lambda x: x is not None, arr));
 
 
   def send_message(channelId, message):
@@ -71,48 +61,56 @@ class BeepBoop:
 
 class Listener:
 
-  def __init__(self, client, channel_to_mirror_to, endpoint, requests, sseclient):
-    self.requests, self.sseclient = itemgetter('requests', 'sseclient')(deps)
-    log('APP', "in Listener, obtained deps")
-    if channel_to_mirror_to is not None:
-      log('APP', 'mirroring CWT chat to channel %s only.' % self.env.channel)
+  def __init__(self, client, channel_to_mirror_to, node_runner, open_stream):
+    self.posted = {}
+    self.client = client
+    self.node_runner = node_runner
+    self.open_stream = open_stream
+    self.channel_to_mirror_to = \
+        int(channel_to_mirror_to) if channel_to_mirror_to is not None else None
+    if self.channel_to_mirror_to is not None:
+      log('APP', 'mirroring CWT chat to channel %s only.' % self.channel_to_mirror_to)
     else:
       log('APP', 'mirroring CWT chat to all channels on server.')
 
 
-  def listen(self, cb):
-    posted = {}
-    while 1:
-      log('', 'looping')
-      messages = SSEClient(requests.get(self.url, stream=True))
-      for msg in messages.events():
-        if msg.event != "EVENT":
-          continue
-        data = json.loads(msg.data)
-        log('EVENT', data)
-        self.process_message(data, posted, cb)
-      log('', 'out of loopery')
+  def listen(self, listen_iterations, cb):
+    if listen_iterations == -1:
+      while 1:
+        self.loop()
+    else:
+      for _ in range(listen_iterations):
+        self.loop(cb)
 
 
-  def process_message(self, data, posted, cb):
-    args = arguments(data)
-    log('args', args)
-    node = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8')
-    for channel in self.get_channels():
-      if channel.id not in posted:
-        posted[channel.id] = []
-      if data["id"] in posted[channel.id]:
-        log('message already received', channel.id)
+  def loop(self, cb):
+    log('', 'looping')
+    messages = self.open_stream()
+    for msg in messages.events():
+      if msg.event != "EVENT":
         continue
-      else:
-        if data["newsType"] == "DISCORD_MESSAGE" and \
-              re.search(r"\b%s\b" % channel.id, data["body"].split(',')[1]): 
-          log('Discarding message sent from this same channel', str(channel.id));
-          continue
-        if self.channel_to_mirro_to is None or self.channel_to_mirro_to == channel.id:
-          log(channel.id, 'sending to channel: ' + str(node))
-          cb(channel.id, node)
-          posted[channel.id].append(data["id"])
+      data = json.loads(msg.data)
+      log('EVENT', data)
+      for channel in self.get_channels():
+        self.process_message(data, channel.id, cb)
+    log('', 'out of loopery')
+    
+
+
+  def process_message(self, data, channelId, cb):
+    if channelId not in self.posted:
+      self.posted[channelId] = []
+    if data["id"] in self.posted[channelId]:
+      log('message already received', channelId)
+    else:
+      if data["newsType"] == "DISCORD_MESSAGE" and \
+            re.search(r"\b%s\b" % channelId, data["body"].split(',')[1]): 
+        log('Discarding message sent from this same channel', str(channelId));
+      elif self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
+        formatted = self.node_runner.format(data)
+        log(channelId, 'sending to channel: ' + str(formatted))
+        cb(channelId, formatted)
+        self.posted[channelId].append(data["id"])
 
 
   def get_channels(self):
@@ -121,15 +119,42 @@ class Listener:
         yield channel
 
 
+
+class NodeRunner:
+
+  def __init__(self, script, runner):
+    self.script = script if script.endswith("/") else script + "/"
+    self.runner = runner
+    import subprocess
+
+
+  def handle(self, cmd, display_name, channel):
+    link = ('https://discord.com/channels/%s/%s' % (str(channel.guild.id), str(channel.id)))
+    arguments = ["node", self.env.script + 'handle.js', 'DISCORD', link, display_name, cmd]
+    node = self.runner(arguments)
+    return list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
+
+
+  def format(self, data):
+    category, author, body = itemgetter('category', 'author', 'body')(data)
+    arguments = ["node", self.script + 'format.js', category, author["username"], body]
+    if data["newsType"]:
+      arguments.append(data["newsType"])
+    return self.runner(arguments)
+
+
 if __name__ == "__main__":
   load_dotenv()
 
+  node_runner = NodeRunner(
+      os.getenv("SCRIPT"),
+      lambda args: subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8'))
 
   def listener_factory(*args):
     import requests
     from sseclient import SSEClient
-    Listener(*args, os.getenv("CWT_MESSAGE_SSE_ENDPOINT"), requests, sseclient)
-
+    endpoint = os.getenv("CWT_MESSAGE_SSE_ENDPOINT")
+    Listener(*args, node_runner, lambda x: SSEClient(requests.get(endpoint, stream=True)))
 
   beepBoop = BeepBoop(
       client = discord.Client(),
@@ -139,7 +164,7 @@ if __name__ == "__main__":
 
   @beepBop.client.event
   async def on_ready():
-    log('', 'ready')
+    logger.info("ready")
 
 
   @beepBop.client.event
@@ -147,20 +172,18 @@ if __name__ == "__main__":
     if message.author == client.user:
       return
     cmd = message.content.strip()
-    log('on message', cmd)
+    logger.info("message: %s", cmd)
     if cmd == '!cwt':
+      logger.info("Received !cwt command")
       await message.channel.send(
           "Beep Bop CWT Bot. I act upon commands (see !cwtcommands)"
           " but I also mirror the CWT chat.")
-      return
-    link = 'https://discord.com/channels/' + str(message.channel.id)
-    node = subprocess.run(
-        ["node", self.env.script + 'handle.js', 'DISCORD', link, message.author.display_name, cmd],
-        stdout=subprocess.PIPE).stdout.decode('utf8')
-    try:
-      result = list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
-      log('responding', result)
-      await message.channel.send(result)
-    except:
-      log(cmd, "did not yield a result")
+    elif cmd.startswith("!cwt"):
+      logger.info("commands starts with !cwt")
+      try:
+        result = node_runner.handle(cmd, message.author.display_name, message.channel)
+        logger.info("sending node result: %s", result)
+        await message.channel.send(result)
+      except:
+        logger.warning("error handling command %s", cmd)
 
