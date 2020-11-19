@@ -10,16 +10,51 @@ class Env:
   def getenv(self, field):
     return self.env[field] if field in self.env else None
 
+# todo append slash if it's not already there to SCRIPT env
+#  and test this of course
+
 class TestSum(unittest.TestCase):
   
   def test_init(self):
     client_mock = Mock()
     client_mock.run = Mock(return_value="okay wow")
-    env = {
-      "DISCORD_TOKEN": "fdasfdsa"
-    }
+    env = {"DISCORD_TOKEN": "fdasfdsa/"}
     beepBoop = BeepBoop(client_mock, 'localhost', Env(env).getenv)
     client_mock.run.assert_called_once_with(env["DISCORD_TOKEN"])
+  
+
+  def test_arguments_shotbox(self):
+    client_mock = Mock()
+    env = {"SCRIPT": "fdasfdsa/"}
+    beepBoop = BeepBoop(client_mock, 'localhost', Env(env).getenv)
+    message = {
+      "category": "SHOUTBOX",
+      "author": {"username": "Zemke"},
+      "body": "Here is a message",
+      "newsType": None
+    }
+    actual = beepBoop.arguments(message)
+    self.assertEqual(
+        actual,
+        ["node", env["SCRIPT"] + "format.js", message["category"], 
+          message["author"]["username"], message["body"]])
+  
+
+  def test_arguments_news(self):
+    client_mock = Mock()
+    env = {"SCRIPT": "fdasfdsa/"}
+    beepBoop = BeepBoop(client_mock, 'localhost', Env(env).getenv)
+    message = {
+      "category": "SHOUTBOX",
+      "author": {"username": "Zemke"},
+      "body": "BoolC,Taner,3,1",
+      "newsType": "REPORT"
+    }
+    actual = beepBoop.arguments(message)
+    self.assertEqual(
+        actual,
+        ["node", env["SCRIPT"] + "format.js", message["category"], 
+          message["author"]["username"], message["body"], message["newsType"]])
 
 
 if __name__ == '__main__':
