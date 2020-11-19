@@ -21,7 +21,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 SCRIPT = os.getenv('SCRIPT') or './'
 LISTEN = os.getenv('LISTEN') == "1"
-CHANNEL = os.getenv('CHANNEL')
+CHANNEL = int(os.getenv('CHANNEL')) if os.getenv('CHANNEL') is not None else None
 client = discord.Client()
 listening = False
 
