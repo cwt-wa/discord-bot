@@ -25,6 +25,10 @@ CHANNEL = os.getenv('CHANNEL')
 client = discord.Client()
 listening = False
 
+if channel is not None:
+  log('APP', 'mirroring CWT chat to channel %s only.' % CHANNEL)
+else:
+  log('APP', 'mirroring CWT chat to all channels on server.')
 
 def process_message(data, posted, cb):
   args = arguments(data)
