@@ -13,7 +13,7 @@ class Env:
 # todo append slash if it's not already there to SCRIPT env
 #  and test this of course
 
-class TestSum(unittest.TestCase):
+class TestBeepBoop(unittest.TestCase):
   
   @classmethod
   def setUpClass(cls):
