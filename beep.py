@@ -130,10 +130,12 @@ if __name__ == "__main__":
     from sseclient import SSEClient
     Listener(*args, os.getenv("CWT_MESSAGE_SSE_ENDPOINT"), requests, sseclient)
 
+
   beepBoop = BeepBoop(
       client = discord.Client(),
       getenv = os.getenv,
       listener_factory = listener_factory)
+
 
   @beepBop.client.event
   async def on_ready():
