@@ -22,66 +22,81 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 SCRIPT = os.getenv('SCRIPT') or './'
 LISTEN = os.getenv('LISTEN') == "1"
 CHANNEL = int(os.getenv('CHANNEL')) if os.getenv('CHANNEL') is not None else None
+
 client = discord.Client()
-listening = False
 
-def process_message(data, posted, cb):
-  args = arguments(data)
-  log('args', args)
-  node = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8')
-  for channel in get_channels():
-    if channel.id not in posted:
-      posted[channel.id] = []
-    if data["id"] in posted[channel.id]:
-      log('message already received', channel.id)
-      continue
-    else:
-      if data["newsType"] == "DISCORD_MESSAGE" and re.search(r"\b%s\b" % channel.id, data["body"].split(',')[1]): 
-        log('Discarding message sent from this same channel', str(channel.id));
+
+def log(prefix, s):
+  logger.info("APP - %s - %s" % (str(prefix), str(s)))
+
+
+class BeepBoop:
+
+  def __init__(self, client, url):
+    self.client = client
+    self.client.run(TOKEN)
+    self.url = url
+
+
+  def process_message(self, data, posted, cb):
+    args = arguments(data)
+    log('args', args)
+    node = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8')
+    for channel in self.get_channels():
+      if channel.id not in posted:
+        posted[channel.id] = []
+      if data["id"] in posted[channel.id]:
+        log('message already received', channel.id)
         continue
-      if CHANNEL is None or CHANNEL == channel.id:
-        log(channel.id, 'sending to channel: ' + str(node))
-        cb(channel.id, node)
-        posted[channel.id].append(data["id"])
+      else:
+        if data["newsType"] == "DISCORD_MESSAGE" and \
+              re.search(r"\b%s\b" % channel.id, data["body"].split(',')[1]): 
+          log('Discarding message sent from this same channel', str(channel.id));
+          continue
+        if CHANNEL is None or CHANNEL == channel.id:
+          log(channel.id, 'sending to channel: ' + str(node))
+          cb(channel.id, node)
+          posted[channel.id].append(data["id"])
 
 
-def listen(cb):
-  posted = {}
-  url = 'https://cwtsite.com/api/message/listen'
-  # url = 'http://localhost:9000/api/message/listen'
-  while 1:
-    log('', 'looping')
-    messages = SSEClient(requests.get(url, stream=True))
-    for msg in messages.events():
-      if msg.event != "EVENT":
-        continue
-      data = json.loads(msg.data)
-      log('EVENT', data)
-      process_message(data, posted, cb)
-    log('', 'out of loopery')
+  def listen(self, cb):
+    posted = {}
+    while 1:
+      log('', 'looping')
+      messages = SSEClient(requests.get(self.url, stream=True))
+      for msg in messages.events():
+        if msg.event != "EVENT":
+          continue
+        data = json.loads(msg.data)
+        log('EVENT', data)
+        self.process_message(data, posted, cb)
+      log('', 'out of loopery')
 
 
-def get_channels():
-  for guild in client.guilds:
-    for channel in guild.text_channels:
-      yield channel
+  def arguments(self, data):
+    category = data["category"]
+    username = data["author"]["username"]
+    body = data["body"]
+    newsType = data["newsType"]
+    arr = ["node", SCRIPT + 'format.js', category, username, body, newsType]
+    return list(filter(lambda x: x is not None, arr));
 
 
-def arguments(data):
-  category = data["category"]
-  username = data["author"]["username"]
-  body = data["body"]
-  newsType = data["newsType"]
-  arr = ["node", SCRIPT + 'format.js', category, username, body, newsType]
-  return list(filter(lambda x: x is not None, arr));
+  def send_message(channelId, message):
+    self.client.loop.create_task(self.client.get_channel(channelId).send(message))
 
 
-def send_message(channelId, message):
-  client.loop.create_task(client.get_channel(channelId).send(message))
+  def get_channels(self):
+    for guild in self.client.guilds:
+      for channel in guild.text_channels:
+        yield channel
 
 
 @client.event
 async def on_ready():
+  # url = 'http://localhost:9000/api/message/listen'
+  url = 'https://cwtsite.com/api/message/listen'
+  beepBoop = BeepBoop(client, url)
   log('', 'ready')
   if CHANNEL is not None:
     log('APP', 'mirroring CWT chat to channel %s only.' % CHANNEL)
@@ -102,7 +117,9 @@ async def on_message(message):
   cmd = message.content.strip()
   log('on message', cmd)
   if cmd == '!cwt':
-    await message.channel.send("Beep Bop CWT Bot. I act upon commands (see !cwtcommands) but I also mirror the CWT chat.")
+    await message.channel.send(
+        "Beep Bop CWT Bot. I act upon commands (see !cwtcommands)"
+        " but I also mirror the CWT chat.")
     return
   link = 'https://discord.com/channels/' + str(message.channel.id)
   node = subprocess.run(
@@ -114,11 +131,4 @@ async def on_message(message):
     await message.channel.send(result)
   except:
     log(cmd, "did not yield a result")
-
-
-def log(prefix, s):
-  logger.info("APP - %s - %s" % (str(prefix), str(s)))
-
-
-client.run(TOKEN)
 
