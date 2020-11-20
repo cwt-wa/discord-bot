@@ -253,6 +253,6 @@ if __name__ == "__main__":
 
   EventHandler(beepBoop.client, node_runner, beepBoop.env.channel).register()
 
-  beepBoop.client.run(self.env.token)
+  beepBoop.client.run(beepBoop.env.token)
 
 
