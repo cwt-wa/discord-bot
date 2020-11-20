@@ -7,6 +7,7 @@ import discord
 from dotenv import load_dotenv
 import json
 import logging
+import subprocess
 
 
 logging.basicConfig(level=logging.INFO)
@@ -125,7 +126,6 @@ class NodeRunner:
   def __init__(self, script, runner):
     self.script = script if script.endswith("/") else script + "/"
     self.runner = runner
-    import subprocess
 
 
   def handle(self, cmd, display_name, guildId, channelId):
