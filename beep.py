@@ -145,6 +145,10 @@ class NodeRunner:
 
 class EventHandler:
 
+  other_user_dm_response = \
+      "I don't offer private services, " \
+      "but here are some commands you can give into the public channels I'm in:"
+
   def __init__(self, client, node_runner, channel_to_mirror_to):
     self.client = client
     self.node_runner = node_runner
@@ -181,12 +185,11 @@ class EventHandler:
       self.on_message(message)
 
 
-  # TODO test
-  async def on_direct_message(message):
-    if message.author != client.user:
-      await message.channel.send(
-            "I don't offer private services, "
-            "but here are some commands you can give into the public channels I'm in:")
+  async def on_direct_message(self, message):
+    print(message.author)
+    print(self.client.user)
+    if message.author != self.client.user:
+      await message.channel.send(EventHandler.other_user_dm_response)
       await message.channel.send(self.node_runner.command("!cwtcommands"))
     elif message.content.startswith("!adminannounce"):
       [command, channel, *content] = message.content.split(" ")
@@ -195,15 +198,15 @@ class EventHandler:
         logger.info('announcing to all channels')
         for c in self.client.get_all_channels():
           if c is discord.TextChannel:
-            await client.get_channel(c).send(content)
+            await self.client.get_channel(c).send(content)
       if channel == "x":
         if self.channel_to_mirror_to is None:
           logger.info("not announcing to env channel as it's not specified")
         else:
           logger.info('announcing to env channel of %s', self.channel_to_mirror_to)
-          await client.get_channel(self.channel_to_mirror_to).send(content)
+          await self.client.get_channel(self.channel_to_mirror_to).send(content)
       else:  # to channel as given by command
-        channel_to_send_to  = client.get_channel(int(channel))
+        channel_to_send_to  = self.client.get_channel(int(channel))
         if channel_to_send_to is not None:
           logger.info('sending to channel %s as specified by the command', channel)
           await channel_to_send_to.send(content)

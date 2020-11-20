@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, PropertyMock, AsyncMock, AsyncMock
+from unittest.mock import Mock, PropertyMock, AsyncMock, AsyncMock, call
 from beep import BeepBoop, Listener, NodeRunner, EventHandler
 from sseclient import Event
 from discord import Guild, TextChannel
@@ -106,6 +106,21 @@ class EventHandlerTest(unittest.TestCase):
     actual = asyncio.get_event_loop().run_until_complete(
         event_handler.on_message(message_mock))
     message_mock.channel.send.assert_called_once_with(expected)
+
+
+  def test_on_direct_message_other_user(self):
+    channel_mock = self.create_channel_mock()
+    message_mock = self.create_message_mock("Hello, there", channel_mock)
+    node_runner_mock = Mock()
+    command_return_value = "these are the commands"
+    node_runner_mock.command = Mock(return_value=command_return_value)
+    client_mock = Mock()
+    eventHandler = EventHandler(client_mock, node_runner_mock, channel_mock.id)
+    asyncio.get_event_loop().run_until_complete(
+        eventHandler.on_direct_message(message_mock))
+    calls = [call(EventHandler.other_user_dm_response), call(command_return_value)]
+    message_mock.channel.send.assert_has_calls(calls)
+    self.assertEqual(len(message_mock.channel.send.mock_calls), 2)
 
 
 class NodeRunnerTest(unittest.TestCase):
