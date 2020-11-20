@@ -196,7 +196,9 @@ class EventHandler:
     if message.author != self.client.user:
       logger.info("dm from another user %s", message.content)
       await message.channel.send(EventHandler.other_user_dm_response)
-      await message.channel.send(self.node_runner.command("!cwtcommands"))
+      #  DMChannel doesn't have guild
+      await message.channel.send(self.node_runner.handle(
+          "!cwtcommands", message.author.display_name, "", message.channel.id))
     elif message.content.startswith("!adminannounce"):
       [command, channel, *content] = message.content.split(" ")
       content = " ".join(content).strip()
