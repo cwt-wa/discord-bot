@@ -189,7 +189,7 @@ class EventHandler:
 
     @self.client.event
     async def on_message(message):
-      self.on_message(message)
+      await self.on_message(message)
 
 
   async def on_direct_message(self, message):
