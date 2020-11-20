@@ -123,6 +123,28 @@ class EventHandlerTest(unittest.TestCase):
     self.assertEqual(len(message_mock.channel.send.mock_calls), 2)
 
 
+  def test_on_direct_message_send_to_all_channels(self):
+    channel_mock = self.create_channel_mock()
+    content = "hello to all"
+    message_mock = self.create_message_mock("!adminannounce - " + content, channel_mock)
+    node_runner_mock = Mock()
+    client_mock = Mock()
+    user_n_author_mock = {}
+    type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
+    type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
+    text_channel_mock = Mock(spec=TextChannel)
+    text_channel_mock.send = AsyncMock(return_value=None)
+    all_channels = [text_channel_mock]
+    client_mock.get_all_channels = Mock(return_value=all_channels)
+    eventHandler = EventHandler(client_mock, node_runner_mock, channel_mock.id)
+    asyncio.get_event_loop().run_until_complete(
+        eventHandler.on_direct_message(message_mock))
+    # send to all channels
+    text_channel_mock.send.assert_called_once_with(content)
+    # send to dm
+    message_mock.channel.send.assert_called_once_with(EventHandler.confirm_all_channels)
+
+
 class NodeRunnerTest(unittest.TestCase):
 
   @classmethod

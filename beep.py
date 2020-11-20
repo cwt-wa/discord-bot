@@ -149,6 +149,8 @@ class EventHandler:
       "I don't offer private services, " \
       "but here are some commands you can give into the public channels I'm in:"
 
+  confirm_all_channels = "Your message has been sent to all channels"
+
   def __init__(self, client, node_runner, channel_to_mirror_to):
     self.client = client
     self.node_runner = node_runner
@@ -187,17 +189,19 @@ class EventHandler:
 
   async def on_direct_message(self, message):
     if message.author != self.client.user:
+      logger.info("dm from another user %s", message.content)
       await message.channel.send(EventHandler.other_user_dm_response)
       await message.channel.send(self.node_runner.command("!cwtcommands"))
     elif message.content.startswith("!adminannounce"):
       [command, channel, *content] = message.content.split(" ")
-      content = content.join(" ")
+      content = " ".join(content)
       if channel == "-":  # to all channels
         logger.info('announcing to all channels')
         for c in self.client.get_all_channels():
-          if c is discord.TextChannel:
-            await self.client.get_channel(c).send(content)
-      if channel == "x":
+          if isinstance(c, discord.TextChannel):
+            await c.send(content)
+        await message.channel.send(EventHandler.confirm_all_channels)
+      elif channel == "x":
         if self.channel_to_mirror_to is None:
           logger.info("not announcing to env channel as it's not specified")
         else:
