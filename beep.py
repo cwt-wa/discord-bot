@@ -128,8 +128,8 @@ class NodeRunner:
     self.runner = runner
 
 
-  def handle(self, cmd, display_name, guildId, channelId):
-    link = ('https://discord.com/channels/%s/%s' % (str(guildId), str(channelId)))
+  def handle(self, cmd, display_name, guild_id, channel_id):
+    link = ('https://discord.com/channels/%s/%s' % (str(guild_id), str(channel_id)))
     arguments = ["node", self.script + 'handle.js', 'DISCORD', link, display_name, cmd]
     node = self.runner(arguments)
     return list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
