@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import json
 import logging
 
+
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
@@ -15,7 +16,7 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 
-def log(prefix, s):
+def log(prefix, s):  # TODO get rid of this and use logging
   logger.info("APP - %s - %s" % (str(prefix), str(s)))
 
 
@@ -150,6 +151,7 @@ class EventHandler:
 
   def __init__(self, client, node_runner):
     self.client = client
+    self.node_runner = node_runner
 
   async def on_message(self, message):
     if message.author == self.client.user:

@@ -94,6 +94,20 @@ class EventHandlerTest(unittest.TestCase):
     message_mock.channel.send.assert_called_once_with(BeepBoop.say_beep_boop)
 
 
+  def test_on_message_self(self):
+    client_mock = Mock()
+    type(client_mock).user = PropertyMock(return_value=Mock())
+    node_runner_mock = Mock()
+    expected = "whatevernodereturns"
+    node_runner_mock.handle = Mock(return_value=expected)
+    event_handler = EventHandler(client_mock, node_runner_mock)
+    channel_mock = self.create_channel_mock()
+    message_mock = self.create_message_mock("!cwtcommands", channel_mock)
+    actual = asyncio.get_event_loop().run_until_complete(
+        event_handler.on_message(message_mock))
+    message_mock.channel.send.assert_called_once_with(expected)
+
+
 class NodeRunnerTest(unittest.TestCase):
 
   @classmethod
