@@ -186,8 +186,6 @@ class EventHandler:
 
 
   async def on_direct_message(self, message):
-    print(message.author)
-    print(self.client.user)
     if message.author != self.client.user:
       await message.channel.send(EventHandler.other_user_dm_response)
       await message.channel.send(self.node_runner.command("!cwtcommands"))
