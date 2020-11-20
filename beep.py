@@ -146,9 +146,10 @@ class NodeRunner:
 
 class EventHandler:
 
-  def __init__(self, client, node_runner):
+  def __init__(self, client, node_runner, channel_to_mirror_to):
     self.client = client
     self.node_runner = node_runner
+    self.channel_to_mirror_to = channel_to_mirror_to
 
   async def on_message(self, message):
     if message.author == self.client.user:
@@ -236,6 +237,6 @@ if __name__ == "__main__":
       getenv = os.getenv,
       listener_factory = listener_factory)
 
-  EventHandler(beepBoop.client, node_runner).register()
+  EventHandler(beepBoop.client, node_runner, beepBop.env.channel).register()
 
 
