@@ -162,10 +162,35 @@ class EventHandlerTest(unittest.TestCase):
     asyncio.get_event_loop().run_until_complete(
         eventHandler.on_direct_message(message_mock))
     client_mock.get_channel.assert_called_once_with(target_channel.id)
-    # send to env channels
+    # send to env channel
     target_channel.send.assert_called_once_with(content)
     # send to dm
     message_mock.channel.send.assert_called_once_with("Message has been sent.")
+
+
+  def test_on_direct_message_send_to_specific_channel(self):
+    channel_mock = self.create_channel_mock()
+    target_channel = Mock()
+    target_channel_id = 72608314
+    type(target_channel).id = PropertyMock(return_value=target_channel_id)
+    target_channel.send = AsyncMock()
+    content = "hello to specific channel"
+    message_mock = self.create_message_mock(
+        "!adminannounce %s %s " % (str(target_channel_id), content), channel_mock)
+    node_runner_mock = Mock()
+    client_mock = Mock()
+    user_n_author_mock = {}
+    type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
+    type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
+    client_mock.get_channel = Mock(return_value=target_channel)
+    eventHandler = EventHandler(client_mock, node_runner_mock, channel_mock.id)
+    asyncio.get_event_loop().run_until_complete(
+        eventHandler.on_direct_message(message_mock))
+    client_mock.get_channel.assert_called_once_with(target_channel.id)
+    # send to specific channel
+    target_channel.send.assert_called_once_with(content)
+    # send to dm
+    message_mock.channel.send.assert_called_once_with(EventHandler.confirm_specific_channel)
 
 
 class NodeRunnerTest(unittest.TestCase):

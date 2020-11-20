@@ -153,6 +153,8 @@ class EventHandler:
 
   not_specified = "Not announcing to env channel as it's not specified."
 
+  confirm_specific_channel = "Message has been sent to that specific channel."
+
   def __init__(self, client, node_runner, channel_to_mirror_to):
     self.client = client
     self.node_runner = node_runner
@@ -196,7 +198,7 @@ class EventHandler:
       await message.channel.send(self.node_runner.command("!cwtcommands"))
     elif message.content.startswith("!adminannounce"):
       [command, channel, *content] = message.content.split(" ")
-      content = " ".join(content)
+      content = " ".join(content).strip()
       if channel == "-":  # to all channels
         logger.info('announcing to all channels')
         for c in self.client.get_all_channels():
@@ -216,6 +218,7 @@ class EventHandler:
         if channel_to_send_to is not None:
           logger.info('sending to channel %s as specified by the command', channel)
           await channel_to_send_to.send(content)
+          await message.channel.send(EventHandler.confirm_specific_channel)
         else:
           logger.warning("Channel %s could not be sent to as it doesn't exist", channel)
     else:
