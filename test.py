@@ -1,9 +1,10 @@
 import unittest
-from unittest.mock import Mock, PropertyMock
-from beep import BeepBoop, Listener, NodeRunner  # TODO split these
+from unittest.mock import Mock, PropertyMock, AsyncMock, AsyncMock
+from beep import BeepBoop, Listener, NodeRunner, EventHandler
 from sseclient import Event
 from discord import Guild, TextChannel
 import json
+import asyncio
 
 class Env:
   
@@ -53,13 +54,45 @@ class TestBeepBoop(unittest.TestCase):
     listener_factory = lambda x: listener_mock(*x, endpoint, None, None)
     beepBoop = BeepBoop(
         client_mock,
-        Env(env).getenv,
-        listener_factory,
+        Env(env).getenv, listener_factory,
         thread_factory_mock)
     thread_factory_mock.inst.assert_called_once()
     listener_mock.assert_called_once_with(
           client_mock, int(env["CHANNEL"]), endpoint, None, None)
-  
+
+
+class EventHandlerTest(unittest.TestCase):
+
+  def create_channel_mock(self):
+    channel_mock = Mock()
+    guild_mock = Mock()
+    type(guild_mock).id = PropertyMock(return_value=5)
+    type(channel_mock).guild = guild_mock
+    type(channel_mock).id = 1234
+    type(channel_mock).send = AsyncMock(return_value=None)
+    return channel_mock
+
+
+  def create_message_mock(self, content, channel_mock):
+    message_mock = Mock()
+    author_mock = Mock()
+    type(author_mock).display_name = PropertyMock(return_value="Zemke")
+    type(message_mock).author = PropertyMock(return_value=author_mock)
+    type(message_mock).content = PropertyMock(return_value=content)
+    type(message_mock).channel = PropertyMock(return_value=channel_mock)
+    return message_mock
+
+
+  def test_on_message_beep_bop(self):
+    client_mock = Mock()
+    type(client_mock).user = PropertyMock(return_value=Mock())
+    event_handler = EventHandler(client_mock, None)
+    channel_mock = self.create_channel_mock()
+    message_mock = self.create_message_mock("!cwt", channel_mock)
+    actual = asyncio.get_event_loop().run_until_complete(
+        event_handler.on_message(message_mock))
+    message_mock.channel.send.assert_called_once_with(BeepBoop.say_beep_boop)
+
 
 class NodeRunnerTest(unittest.TestCase):
 

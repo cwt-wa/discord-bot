@@ -39,6 +39,10 @@ class ThreadFactory:
 
 class BeepBoop:
 
+  say_beep_boop = \
+      "Beep Bop CWT Bot. I act upon commands (see !cwtcommands)" \
+      " but I also mirror the CWT chat."
+
   def __init__(self, client, getenv, listener_factory,
                thread_factory=ThreadFactory()):
     self.client = client
@@ -142,6 +146,40 @@ class NodeRunner:
     return self.runner(arguments)
 
 
+class EventHandler:
+
+  def __init__(self, client, node_runner):
+    self.client = client
+
+  async def on_message(self, message):
+    if message.author == self.client.user:
+      return
+    cmd = message.content.strip()
+    logger.info("message: %s", cmd)
+    if cmd == '!cwt':
+      logger.info("Received !cwt command")
+      await message.channel.send(BeepBoop.say_beep_boop)
+    elif cmd.startswith("!cwt"):
+      logger.info("commands starts with !cwt")
+      try:
+        result = self.node_runner.handle(
+            cmd, message.author.display_name,
+            message.channel.guild.id,  message.channel.id)
+        logger.info("sending node result: %s", result)
+        await message.channel.send(result)
+      except:
+        logger.warning("error handling command %s", cmd)
+
+  def register(self):
+    @self.client.event
+    async def on_ready():
+      logger.info("ready")
+
+    @self.client.event
+    async def on_message(message):
+      self.on_message(message)
+
+
 if __name__ == "__main__":
   load_dotenv()
 
@@ -160,31 +198,6 @@ if __name__ == "__main__":
       getenv = os.getenv,
       listener_factory = listener_factory)
 
+  EventHandler(beepBoop.client, node_runner).register()
 
-  @beepBop.client.event
-  async def on_ready():
-    logger.info("ready")
-
-
-  @beepBop.client.event
-  async def on_message(message):
-    if message.author == client.user:
-      return
-    cmd = message.content.strip()
-    logger.info("message: %s", cmd)
-    if cmd == '!cwt':
-      logger.info("Received !cwt command")
-      await message.channel.send(
-          "Beep Bop CWT Bot. I act upon commands (see !cwtcommands)"
-          " but I also mirror the CWT chat.")
-    elif cmd.startswith("!cwt"):
-      logger.info("commands starts with !cwt")
-      try:
-        result = node_runner.handle(
-            cmd, message.author.display_name,
-            message.channel.guild.id,  message.channel.id)
-        logger.info("sending node result: %s", result)
-        await message.channel.send(result)
-      except:
-        logger.warning("error handling command %s", cmd)
 
