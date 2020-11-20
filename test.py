@@ -69,7 +69,7 @@ class EventHandlerTest(unittest.TestCase):
     type(guild_mock).id = PropertyMock(return_value=5)
     type(channel_mock).guild = guild_mock
     type(channel_mock).id = 1234
-    type(channel_mock).send = AsyncMock(return_value=None)
+    type(channel_mock).send = AsyncMock()
     return channel_mock
 
 
@@ -133,7 +133,7 @@ class EventHandlerTest(unittest.TestCase):
     type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
     type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
     text_channel_mock = Mock(spec=TextChannel)
-    text_channel_mock.send = AsyncMock(return_value=None)
+    text_channel_mock.send = AsyncMock()
     all_channels = [text_channel_mock]
     client_mock.get_all_channels = Mock(return_value=all_channels)
     eventHandler = EventHandler(client_mock, node_runner_mock, None)
