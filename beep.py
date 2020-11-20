@@ -251,7 +251,7 @@ if __name__ == "__main__":
       getenv = os.getenv,
       listener_factory = listener_factory)
 
-  EventHandler(beepBoop.client, node_runner, beepBop.env.channel).register()
+  EventHandler(beepBoop.client, node_runner, beepBoop.env.channel).register()
 
   beepBoop.client.run(self.env.token)
 
