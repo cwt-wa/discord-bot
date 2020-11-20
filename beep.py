@@ -155,7 +155,9 @@ class EventHandler:
       return
     cmd = message.content.strip()
     logger.info("message: %s", cmd)
-    if cmd == '!cwt':
+    if message.channel is discord.DMChannel:
+      await self.on_direct_message(message)
+    elif cmd == '!cwt':
       logger.info("Received !cwt command")
       await message.channel.send(BeepBoop.say_beep_boop)
     elif cmd.startswith("!cwt"):
@@ -177,6 +179,41 @@ class EventHandler:
     @self.client.event
     async def on_message(message):
       self.on_message(message)
+
+
+  # TODO test
+  async def on_direct_message(message):
+    if message.author != client.user:
+      await message.channel.send(
+            "I don't offer private services, "
+            "but here are some commands you can give into the public channels I'm in:")
+      await message.channel.send(self.node_runner.command("!cwtcommands"))
+    elif message.content.startswith("!adminannounce"):
+      [command, channel, *content] = message.content.split(" ")
+      content = content.join(" ")
+      if channel == "-":  # to all channels
+        logger.info('announcing to all channels')
+        for c in self.client.get_all_channels():
+          if c is discord.TextChannel:
+            await client.get_channel(c).send(content)
+      if channel == "x":
+        if self.channel_to_mirror_to is None:
+          logger.info("not announcing to env channel as it's not specified")
+        else:
+          logger.info('announcing to env channel of %s', self.channel_to_mirror_to)
+          await client.get_channel(self.channel_to_mirror_to).send(content)
+      else:  # to channel as given by command
+        channel_to_send_to  = client.get_channel(int(channel))
+        if channel_to_send_to is not None:
+          logger.info('sending to channel %s as specified by the command', channel)
+          await channel_to_send_to.send(content)
+        else:
+          logger.warning("Channel %s could not be sent to as it doesn't exist", channel)
+    else:
+      await message.channel.send(
+          'Use "!cwtannounce - <message>" to send to all channels; '
+          'or "!cwtannounce x <message>" to send to CHANNEL (from env); '
+          'or "!cwtannounce <channelId> <message>" to send to specific channel.')
 
 
 if __name__ == "__main__":
