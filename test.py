@@ -115,7 +115,7 @@ class EventHandlerTest(unittest.TestCase):
     command_return_value = "these are the commands"
     node_runner_mock.command = Mock(return_value=command_return_value)
     client_mock = Mock()
-    eventHandler = EventHandler(client_mock, node_runner_mock, channel_mock.id)
+    eventHandler = EventHandler(client_mock, node_runner_mock, None)
     asyncio.get_event_loop().run_until_complete(
         eventHandler.on_direct_message(message_mock))
     calls = [call(EventHandler.other_user_dm_response), call(command_return_value)]
@@ -136,7 +136,7 @@ class EventHandlerTest(unittest.TestCase):
     text_channel_mock.send = AsyncMock(return_value=None)
     all_channels = [text_channel_mock]
     client_mock.get_all_channels = Mock(return_value=all_channels)
-    eventHandler = EventHandler(client_mock, node_runner_mock, channel_mock.id)
+    eventHandler = EventHandler(client_mock, node_runner_mock, None)
     asyncio.get_event_loop().run_until_complete(
         eventHandler.on_direct_message(message_mock))
     # send to all channels
