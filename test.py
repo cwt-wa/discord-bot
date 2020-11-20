@@ -29,7 +29,7 @@ class TestBeepBoop(unittest.TestCase):
     client_mock = Mock()
     env = {"DISCORD_TOKEN": "fdasfdsa/"}
     beepBoop = BeepBoop(client_mock, Env(env).getenv, self.listener_mock)
-    client_mock.run.assert_called_once_with(env["DISCORD_TOKEN"])
+    client_mock.run.assert_not_called()
     client_mock.listen.assert_not_called()
 
 

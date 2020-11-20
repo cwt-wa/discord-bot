@@ -45,7 +45,6 @@ class BeepBoop:
                thread_factory=ThreadFactory()):
     self.client = client
     self.env = Env(getenv)
-    self.client.run(self.env.token)
     if self.env.listen:
       logger.info("I'm listening.")
       listener = listener_factory([self.client, self.env.channel])
@@ -238,5 +237,7 @@ if __name__ == "__main__":
       listener_factory = listener_factory)
 
   EventHandler(beepBoop.client, node_runner, beepBop.env.channel).register()
+
+  beepBoop.client.run(self.env.token)
 
 
