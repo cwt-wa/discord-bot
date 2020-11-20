@@ -9,6 +9,7 @@ import json
 import logging
 
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
@@ -31,7 +32,7 @@ class ThreadFactory:
     import threading
 
   def inst(self, target, args):
-    return threading.Thread(target=listener.listen, args=(self.send_message,))
+    return threading.Thread(target=target, args=args)
 
 
 class BeepBoop:
@@ -78,7 +79,7 @@ class Listener:
   def listen(self, listen_iterations, cb):
     if listen_iterations == -1:
       while 1:
-        self.loop()
+        self.loop(cb)
     else:
       for _ in range(listen_iterations):
         self.loop(cb)
@@ -185,11 +186,13 @@ if __name__ == "__main__":
       os.getenv("SCRIPT"),
       lambda args: subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8'))
 
-  def listener_factory(*args):
+  def listener_factory(args):
     import requests
     from sseclient import SSEClient
+    logger.info("args given to listener_factory: %s", args)
     endpoint = os.getenv("CWT_MESSAGE_SSE_ENDPOINT")
-    Listener(*args, node_runner, lambda x: SSEClient(requests.get(endpoint, stream=True)))
+    logger.info("Will be listening to %s", endpoint)
+    return Listener(*args, node_runner, lambda: SSEClient(requests.get(endpoint, stream=True)))
 
   beepBoop = BeepBoop(
       client = discord.Client(),
