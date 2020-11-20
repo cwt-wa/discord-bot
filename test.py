@@ -145,6 +145,29 @@ class EventHandlerTest(unittest.TestCase):
     message_mock.channel.send.assert_called_once_with(EventHandler.confirm_all_channels)
 
 
+  def test_on_direct_message_send_to_env_channel(self):
+    channel_mock = self.create_channel_mock()
+    content = "hello to env channel"
+    message_mock = self.create_message_mock("!adminannounce x " + content, channel_mock)
+    node_runner_mock = Mock()
+    client_mock = Mock()
+    user_n_author_mock = {}
+    type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
+    type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
+    target_channel = Mock()
+    type(target_channel).id = PropertyMock(return_value=4321)
+    target_channel.send = AsyncMock()
+    client_mock.get_channel = Mock(return_value=target_channel)
+    eventHandler = EventHandler(client_mock, node_runner_mock, target_channel.id)
+    asyncio.get_event_loop().run_until_complete(
+        eventHandler.on_direct_message(message_mock))
+    client_mock.get_channel.assert_called_once_with(target_channel.id)
+    # send to env channels
+    target_channel.send.assert_called_once_with(content)
+    # send to dm
+    message_mock.channel.send.assert_called_once_with("Message has been sent.")
+
+
 class NodeRunnerTest(unittest.TestCase):
 
   @classmethod

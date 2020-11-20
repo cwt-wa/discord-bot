@@ -151,6 +151,8 @@ class EventHandler:
 
   confirm_all_channels = "Your message has been sent to all channels"
 
+  not_specified = "Not announcing to env channel as it's not specified."
+
   def __init__(self, client, node_runner, channel_to_mirror_to):
     self.client = client
     self.node_runner = node_runner
@@ -201,12 +203,14 @@ class EventHandler:
           if isinstance(c, discord.TextChannel):
             await c.send(content)
         await message.channel.send(EventHandler.confirm_all_channels)
-      elif channel == "x":
+      elif channel == "x":  # to channel from env
         if self.channel_to_mirror_to is None:
-          logger.info("not announcing to env channel as it's not specified")
+          logger.info(EventHandler.not_specified)
+          await message.channel.send(EventHandler.not_specified)
         else:
           logger.info('announcing to env channel of %s', self.channel_to_mirror_to)
           await self.client.get_channel(self.channel_to_mirror_to).send(content)
+          await message.channel.send("Message has been sent.")
       else:  # to channel as given by command
         channel_to_send_to  = self.client.get_channel(int(channel))
         if channel_to_send_to is not None:
