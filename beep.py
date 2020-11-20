@@ -16,10 +16,6 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 
-def log(prefix, s):  # TODO get rid of this and use logging
-  logger.info("APP - %s - %s" % (str(prefix), str(s)))
-
-
 class Env:
   
   def __init__(self, getenv):
@@ -50,14 +46,14 @@ class BeepBoop:
     self.env = Env(getenv)
     self.client.run(self.env.token)
     if self.env.listen:
-      log('APP', 'you wanted me to listen, I listen')
+      logger.info("I'm listening.")
       listener = listener_factory([self.client, self.env.channel])
       thread = thread_factory.inst(listener.listen, (-1, self.send_message))
       thread.start()
     else:
-      log('not listening', 'listen by setting env LISTEN to 1')
+      logger.info('not listening, listen by setting env LISTEN to 1')
       if self.env.channel is not None:
-        log('APP', 'CHANNEL env is set, but you\'re not listening')
+        logger.info('CHANNEL env is set, but you\'re not listening')
 
 
   def send_message(channelId, message):
@@ -74,9 +70,9 @@ class Listener:
     self.channel_to_mirror_to = \
         int(channel_to_mirror_to) if channel_to_mirror_to is not None else None
     if self.channel_to_mirror_to is not None:
-      log('APP', 'mirroring CWT chat to channel %s only.' % self.channel_to_mirror_to)
+      logger.info('mirroring CWT chat to channel %s only.', self.channel_to_mirror_to)
     else:
-      log('APP', 'mirroring CWT chat to all channels on server.')
+      logger.info('mirroring CWT chat to all channels on server.')
 
 
   def listen(self, listen_iterations, cb):
@@ -89,16 +85,16 @@ class Listener:
 
 
   def loop(self, cb):
-    log('', 'looping')
+    logger.info('looping')
     messages = self.open_stream()
     for msg in messages.events():
       if msg.event != "EVENT":
         continue
       data = json.loads(msg.data)
-      log('EVENT', data)
+      logger.info('EVENT %s', data)
       for channel in self.get_channels():
         self.process_message(data, channel.id, cb)
-    log('', 'out of loopery')
+    logger.info('out of loopery')
     
 
 
@@ -106,14 +102,14 @@ class Listener:
     if channelId not in self.posted:
       self.posted[channelId] = []
     if data["id"] in self.posted[channelId]:
-      log('message already received', channelId)
+      logger.info('message already received %s', channelId)
     else:
       if data["newsType"] == "DISCORD_MESSAGE" and \
             re.search(r"\b%s\b" % channelId, data["body"].split(',')[1]): 
-        log('Discarding message sent from this same channel', str(channelId));
+        logger.info('Discarding message sent from this same channel %s', str(channelId));
       elif self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
         formatted = self.node_runner.format(data)
-        log(channelId, 'sending to channel: ' + str(formatted))
+        logger.info('sending to channel %s: %s', str(channelId), str(formatted))
         cb(channelId, formatted)
         self.posted[channelId].append(data["id"])
 
