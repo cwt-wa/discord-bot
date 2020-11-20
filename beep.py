@@ -165,7 +165,8 @@ class EventHandler:
       return
     cmd = message.content.strip()
     logger.info("message: %s", cmd)
-    if message.channel is discord.DMChannel:
+    if isinstance(message.channel, discord.DMChannel):
+      logger.info("is direct message")
       await self.on_direct_message(message)
     elif cmd == '!cwt':
       logger.info("Received !cwt command")
