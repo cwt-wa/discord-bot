@@ -86,7 +86,7 @@ class EventHandlerTest(unittest.TestCase):
   def test_on_message_beep_bop(self):
     client_mock = Mock()
     type(client_mock).user = PropertyMock(return_value=Mock())
-    event_handler = EventHandler(client_mock, None)
+    event_handler = EventHandler(client_mock, None, None)
     channel_mock = self.create_channel_mock()
     message_mock = self.create_message_mock("!cwt", channel_mock)
     actual = asyncio.get_event_loop().run_until_complete(
@@ -100,7 +100,7 @@ class EventHandlerTest(unittest.TestCase):
     node_runner_mock = Mock()
     expected = "whatevernodereturns"
     node_runner_mock.handle = Mock(return_value=expected)
-    event_handler = EventHandler(client_mock, node_runner_mock)
+    event_handler = EventHandler(client_mock, node_runner_mock, None)
     channel_mock = self.create_channel_mock()
     message_mock = self.create_message_mock("!cwtcommands", channel_mock)
     actual = asyncio.get_event_loop().run_until_complete(
