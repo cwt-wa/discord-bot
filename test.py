@@ -112,13 +112,13 @@ class EventHandlerTest(unittest.TestCase):
     channel_mock = self.create_channel_mock()
     message_mock = self.create_message_mock("Hello, there", channel_mock)
     node_runner_mock = Mock()
-    command_return_value = "these are the commands"
-    node_runner_mock.command = Mock(return_value=command_return_value)
+    handle_return_value = "these are the commands"
+    node_runner_mock.handle = Mock(return_value=handle_return_value)
     client_mock = Mock()
     eventHandler = EventHandler(client_mock, node_runner_mock, None)
     asyncio.get_event_loop().run_until_complete(
         eventHandler.on_direct_message(message_mock))
-    calls = [call(EventHandler.other_user_dm_response), call(command_return_value)]
+    calls = [call(EventHandler.other_user_dm_response), call(handle_return_value)]
     message_mock.channel.send.assert_has_calls(calls)
     self.assertEqual(len(message_mock.channel.send.mock_calls), 2)
 
