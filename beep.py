@@ -57,7 +57,7 @@ class BeepBoop:
         logger.info('CHANNEL env is set, but you\'re not listening')
 
 
-  def send_message(channelId, message):
+  def send_message(self, channelId, message):
     self.client.loop.create_task(self.client.get_channel(channelId).send(message))
 
 
