@@ -255,9 +255,9 @@ class EventHandler:
           logger.warning("Channel %s could not be sent to as it doesn't exist", channel)
     else:
       await message.channel.send(
-          'Use "!cwtannounce - <message>" to send to all channels; '
-          'or "!cwtannounce x <message>" to send to CHANNEL (from env); '
-          'or "!cwtannounce <channelId> <message>" to send to specific channel.')
+          'Use "!adminannounce - <message>" to send to all channels; '
+          'or "!adminannounce x <message>" to send to CHANNEL (from env); '
+          'or "!adminannounce <channelId> <message>" to send to specific channel.')
 
 
 if __name__ == "__main__":
