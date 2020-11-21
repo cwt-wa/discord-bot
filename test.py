@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, AsyncMock, AsyncMock, call
-from beep import BeepBoop, Listener, NodeRunner, EventHandler
+from beep import BeepBoop, Listener, NodeRunner, EventHandler, zemke_id
 from sseclient import Event
 from discord import Guild, TextChannel
 import json
@@ -129,7 +129,8 @@ class EventHandlerTest(unittest.TestCase):
     message_mock = self.create_message_mock("!adminannounce - " + content, channel_mock)
     node_runner_mock = Mock()
     client_mock = Mock()
-    user_n_author_mock = {}
+    user_n_author_mock = Mock()
+    type(user_n_author_mock).id = PropertyMock(return_value=zemke_id)
     type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
     type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
     text_channel_mock = Mock(spec=TextChannel)
@@ -151,7 +152,8 @@ class EventHandlerTest(unittest.TestCase):
     message_mock = self.create_message_mock("!adminannounce x " + content, channel_mock)
     node_runner_mock = Mock()
     client_mock = Mock()
-    user_n_author_mock = {}
+    user_n_author_mock = Mock()
+    type(user_n_author_mock).id = PropertyMock(return_value=zemke_id)
     type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
     type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
     target_channel = Mock()
@@ -179,7 +181,8 @@ class EventHandlerTest(unittest.TestCase):
         "!adminannounce %s %s " % (str(target_channel_id), content), channel_mock)
     node_runner_mock = Mock()
     client_mock = Mock()
-    user_n_author_mock = {}
+    user_n_author_mock = Mock()
+    type(user_n_author_mock).id = PropertyMock(return_value=zemke_id)
     type(client_mock).user = PropertyMock(return_value=user_n_author_mock)
     type(message_mock).author = PropertyMock(return_value=user_n_author_mock)
     client_mock.get_channel = Mock(return_value=target_channel)
