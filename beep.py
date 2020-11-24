@@ -16,7 +16,7 @@ logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-
+zemke_id = 507097491762839555
 
 class Env:
   
@@ -57,7 +57,7 @@ class BeepBoop:
         logger.info('CHANNEL env is set, but you\'re not listening')
 
 
-  def send_message(channelId, message):
+  def send_message(self, channelId, message):
     self.client.loop.create_task(self.client.get_channel(channelId).send(message))
 
 
@@ -193,7 +193,7 @@ class EventHandler:
 
 
   async def on_direct_message(self, message):
-    if message.author != self.client.user:
+    if message.author.id != zemke_id:
       logger.info("dm from another user %s", message.content)
       await message.channel.send(EventHandler.other_user_dm_response)
       #  DMChannel doesn't have guild
