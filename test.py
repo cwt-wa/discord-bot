@@ -113,7 +113,7 @@ class EventHandlerTest(unittest.TestCase):
     message_mock = self.create_message_mock("Hello, there", channel_mock)
     node_runner_mock = Mock()
     command_return_value = "these are the commands"
-    node_runner_mock.command = Mock(return_value=command_return_value)
+    node_runner_mock.handle = Mock(return_value=command_return_value)
     client_mock = Mock()
     eventHandler = EventHandler(client_mock, node_runner_mock, None)
     asyncio.get_event_loop().run_until_complete(
