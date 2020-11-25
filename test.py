@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, PropertyMock, AsyncMock, AsyncMock, call
-from beep import BeepBoop, Listener, NodeRunner, EventHandler, zemke_id
+from beep import BeepBoop, Listener, NodeRunner, EventHandler, zemke_id, NodeRunnerError
 from sseclient import Event
 from discord import Guild, TextChannel
 import json
@@ -198,6 +198,15 @@ class EventHandlerTest(unittest.TestCase):
 
 class NodeRunnerTest(unittest.TestCase):
 
+  @classmethod
+  def setUpClass(cls):
+    cls.message = message = {
+      "category": "SHOUTBOX",
+      "author": {"username": "Zemke"},
+      "body": "Here is a message",
+    }
+
+
   def create_runner_mock(self, stdout):
     completed_process = Mock()
     runner = Mock(return_value=completed_process)
@@ -213,16 +222,10 @@ class NodeRunnerTest(unittest.TestCase):
     node = "Zemke via CWT: “Here is a messsage”"
     stdout = "some other ouput\nRES xx %s\n" % node
     node_runner = NodeRunner(script, self.create_runner_mock(stdout))
-    message = {
-      "category": "SHOUTBOX",
-      "author": {"username": "Zemke"},
-      "body": "Here is a message",
-      "newsType": None
-    }
-    actual = node_runner.format(message)
+    actual = node_runner.format(self.message)
     self.assertEqual(actual, node);
-    runner_args = ["node", script + "format.js", message["category"],
-                   message["author"]["username"], message["body"]]
+    runner_args = ["node", script + "format.js", self.message["category"],
+                   self.message["author"]["username"], self.message["body"]]
     node_runner.runner.assert_called_once_with(runner_args)
   
 
@@ -263,6 +266,14 @@ class NodeRunnerTest(unittest.TestCase):
                    'https://discord.com/channels/1234/12345',
                    "Zemke", "!cwtcommands"]
     node_runner.runner.assert_called_once_with(runner_args)
+
+
+  def test_format_fail(self):
+    runner = Mock()
+    runner.check_returncode = Mock()
+    stdout = "An error happened"
+    node_runner = NodeRunner('.', self.create_runner_mock(stdout))
+    self.assertRaises(NodeRunnerError, node_runner.format, self.message)
 
 
 class ListenerTest(unittest.TestCase):
