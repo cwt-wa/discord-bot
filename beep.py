@@ -108,10 +108,13 @@ class Listener:
   def process_message(self, data, channelId, cb):
     if channelId not in self.posted:
       self.posted[channelId] = []
+    if "id" not in data:
+      logger.warning("Data has no ID: %s", data)
+      return;
     if data["id"] in self.posted[channelId]:
       logger.info('message already received %s', channelId)
     else:
-      if data["newsType"] == "DISCORD_MESSAGE" and \
+      if "newsType" in data and data["newsType"] == "DISCORD_MESSAGE" and \
             re.search(r"\b%s\b" % channelId, data["body"].split(',')[1]): 
         logger.info('Discarding message sent from this same channel %s', str(channelId));
       elif self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:

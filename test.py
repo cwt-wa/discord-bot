@@ -6,6 +6,13 @@ from discord import Guild, TextChannel
 import json
 import asyncio
 
+message = {
+  "id": 5900,
+  "category": "SHOUTBOX",
+  "author": {"username": "Zemke"},
+  "body": "Here is a message",
+}
+
 class Env:
   
   def __init__(self, env):
@@ -198,15 +205,6 @@ class EventHandlerTest(unittest.TestCase):
 
 class NodeRunnerTest(unittest.TestCase):
 
-  @classmethod
-  def setUpClass(cls):
-    cls.message = message = {
-      "category": "SHOUTBOX",
-      "author": {"username": "Zemke"},
-      "body": "Here is a message",
-    }
-
-
   def create_runner_mock(self, stdout):
     completed_process = Mock()
     runner = Mock(return_value=completed_process)
@@ -222,10 +220,10 @@ class NodeRunnerTest(unittest.TestCase):
     node = "Zemke via CWT: “Here is a messsage”"
     stdout = "some other ouput\nRES xx %s\n" % node
     node_runner = NodeRunner(script, self.create_runner_mock(stdout))
-    actual = node_runner.format(self.message)
+    actual = node_runner.format(message)
     self.assertEqual(actual, node);
-    runner_args = ["node", script + "format.js", self.message["category"],
-                   self.message["author"]["username"], self.message["body"]]
+    runner_args = ["node", script + "format.js", message["category"],
+                   message["author"]["username"], message["body"]]
     node_runner.runner.assert_called_once_with(runner_args)
   
 
@@ -273,7 +271,7 @@ class NodeRunnerTest(unittest.TestCase):
     runner.check_returncode = Mock()
     stdout = "An error happened"
     node_runner = NodeRunner('.', self.create_runner_mock(stdout))
-    self.assertRaises(NodeRunnerError, node_runner.format, self.message)
+    self.assertRaises(NodeRunnerError, node_runner.format, message)
 
 
   def test_handle_fail(self):
@@ -304,7 +302,6 @@ class ListenerTest(unittest.TestCase):
       "category": "SHOUTBOX",
       "author": {"username": "Zemke"},
       "body": "Here is a message",
-      "newsType": None
     }
     events = [Event(event="EVENT", data=json.dumps(message))]
     open_stream = type("SSEClient", (object,), {"events": lambda x: events })
@@ -312,6 +309,30 @@ class ListenerTest(unittest.TestCase):
     cb_mock = Mock()
     listener.listen(1, cb_mock)
     cb_mock.assert_called_once_with(int(channel), formatted)
+
+
+  def test_process_message_empty(self):
+    message = {}
+    channel = "1234"
+    listener = Listener(Mock(), channel, Mock(), Mock())
+    cb = Mock()
+    with self.assertLogs('discord', level='WARN') as logged:
+      listener.process_message(message, channel, cb)
+    cb.assert_not_called()
+    self.assertIn('WARNING:discord:Data has no ID: {}', logged.output)
+
+
+  def test_process_message_other_attr_missing(self):
+    message = {"body": "hello there", "id": 4000}
+    node_runner = Mock()
+    node_runner.format = Mock(side_effect=Exception('any error'))
+    listener = Listener(Mock(), None, node_runner, Mock())
+    cb = Mock()
+    with self.assertLogs('root', level='ERROR') as logged:
+      listener.process_message(message, "1234", cb)
+    cb.assert_not_called()
+    self.assertTrue(len(logged.output) == 1)
+    self.assertIn('ERROR:root:Error while sending', logged.output[0])
 
 
 if __name__ == '__main__':
