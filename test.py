@@ -276,6 +276,14 @@ class NodeRunnerTest(unittest.TestCase):
     self.assertRaises(NodeRunnerError, node_runner.format, self.message)
 
 
+  def test_handle_fail(self):
+    runner = Mock()
+    runner.check_returncode = Mock()
+    stdout = "An error happened"
+    node_runner = NodeRunner('.', self.create_runner_mock(stdout))
+    self.assertRaises(NodeRunnerError, node_runner.handle, "!cwtcommand", "Zemke", 1234, 12345)
+
+
 class ListenerTest(unittest.TestCase):
 
   def test_listen(self):
