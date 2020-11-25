@@ -189,7 +189,7 @@ class EventHandler:
     if message.author == self.client.user:
       return
     cmd = message.content.strip()
-    logger.info("message: %s", cmd)
+    logger.info("%s: %s", message.author.display_name, cmd)
     if isinstance(message.channel, discord.DMChannel):
       logger.info("is direct message")
       await self.on_direct_message(message)
