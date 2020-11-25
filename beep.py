@@ -148,7 +148,7 @@ class NodeRunner:
   def format(self, data):
     category, author, body = itemgetter('category', 'author', 'body')(data)
     arguments = ["node", self.script + 'format.js', category, author["username"], body]
-    if data["newsType"]:
+    if "newsType" in data and data["newsType"]:
       arguments.append(data["newsType"])
     return self._run(arguments)
 
