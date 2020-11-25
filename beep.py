@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import json
 import logging
 import subprocess
+from subprocess import CalledProcessError
 
 
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +18,11 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w'
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 zemke_id = 507097491762839555
+
+
+class NodeRunnerError(Exception):
+  pass
+
 
 class Env:
   
@@ -109,9 +115,14 @@ class Listener:
             re.search(r"\b%s\b" % channelId, data["body"].split(',')[1]): 
         logger.info('Discarding message sent from this same channel %s', str(channelId));
       elif self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
-        formatted = self.node_runner.format(data)
-        logger.info('sending to channel %s: %s', str(channelId), str(formatted))
-        cb(channelId, formatted)
+        try:
+          formatted = self.node_runner.format(data)
+          logger.info('sending to channel %s: %s', str(channelId), str(formatted))
+          cb(channelId, formatted)
+        except CalledProcessError as err:
+          logging.exception("Couldn't format, not sending.")
+        except:
+          logging.exception("Error while sending")
         self.posted[channelId].append(data["id"])
 
 
@@ -131,8 +142,7 @@ class NodeRunner:
   def handle(self, cmd, display_name, guild_id, channel_id):
     link = ('https://discord.com/channels/%s/%s' % (str(guild_id), str(channel_id)))
     arguments = ["node", self.script + 'handle.js', 'DISCORD', link, display_name, cmd]
-    node = self.runner(arguments)
-    return list(filter(lambda x: x.startswith("RES xx "), node.split('\n')))[0][7:]
+    return self._run(arguments)
 
 
   def format(self, data):
@@ -140,7 +150,19 @@ class NodeRunner:
     arguments = ["node", self.script + 'format.js', category, author["username"], body]
     if data["newsType"]:
       arguments.append(data["newsType"])
-    return self.runner(arguments)
+    return self._run(arguments)
+
+
+  def _run(self, args):
+    node = self.runner(args)
+    node.check_returncode()
+    stdout = node.stdout.decode('utf8')
+    ll = list(filter(lambda x: x.startswith("RES xx "), stdout.split('\n')))
+    try:
+      return ll[0][7:]
+    except:
+      logger.info("stdout: %s", stdout)
+      raise NodeRunnerError()
 
 
 class EventHandler:
@@ -180,7 +202,7 @@ class EventHandler:
         logger.info("sending node result: %s", result)
         await message.channel.send(result)
       except:
-        logger.warning("error handling command %s", cmd)
+        logger.exception("error handling command")
 
   def register(self):
     @self.client.event
@@ -197,8 +219,12 @@ class EventHandler:
       logger.info("dm from another user %s", message.content)
       await message.channel.send(EventHandler.other_user_dm_response)
       #  DMChannel doesn't have guild
-      await message.channel.send(self.node_runner.handle(
-          "!cwtcommands", message.author.display_name, "", message.channel.id))
+      try:
+        await message.channel.send(self.node_runner.handle(
+            "!cwtcommands", message.author.display_name, "", message.channel.id))
+      except:
+        logger.exception("Failed responding to DM from other user")
+        await message.channel.send("Sorry, something went wrong.")
     elif message.content.startswith("!adminannounce"):
       [command, channel, *content] = message.content.split(" ")
       content = " ".join(content).strip()
@@ -236,7 +262,7 @@ if __name__ == "__main__":
 
   node_runner = NodeRunner(
       os.getenv("SCRIPT"),
-      lambda args: subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf8'))
+      lambda args: subprocess.run(args, stdout=subprocess.PIPE))
 
   def listener_factory(args):
     import requests

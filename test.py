@@ -198,13 +198,21 @@ class EventHandlerTest(unittest.TestCase):
 
 class NodeRunnerTest(unittest.TestCase):
 
-  @classmethod
-  def setUpClass(cls):
-    pass
+  def create_runner_mock(self, stdout):
+    completed_process = Mock()
+    runner = Mock(return_value=completed_process)
+    completed_process.check_returncode = Mock()
+    stdout_type = Mock()
+    stdout_type.decode = Mock(return_value=stdout)
+    type(completed_process).stdout = PropertyMock(return_value=stdout_type)
+    return runner
+
 
   def test_format_shoutbox(self):
     script = "~/with/trailing/slash/"
-    node_runner = NodeRunner(script, lambda x: x)
+    node = "Zemke via CWT: “Here is a messsage”"
+    stdout = "some other ouput\nRES xx %s\n" % node
+    node_runner = NodeRunner(script, self.create_runner_mock(stdout))
     message = {
       "category": "SHOUTBOX",
       "author": {"username": "Zemke"},
@@ -212,26 +220,29 @@ class NodeRunnerTest(unittest.TestCase):
       "newsType": None
     }
     actual = node_runner.format(message)
-    self.assertEqual(
-        actual,
-        ["node", script + "format.js", message["category"], 
-         message["author"]["username"], message["body"]])
+    self.assertEqual(actual, node);
+    runner_args = ["node", script + "format.js", message["category"],
+                   message["author"]["username"], message["body"]]
+    node_runner.runner.assert_called_once_with(runner_args)
   
 
   def test_format_news(self):
     script = "../src/no/trailing/slash"
-    node_runner = NodeRunner(script, lambda x: x)
+    node = "BoolC via CWT: “BoolC 3–1 Taner”"
+    stdout = "some other ouput\nRES xx %s\n" % node
+    node_runner = NodeRunner(script, self.create_runner_mock(stdout))
     message = {
-      "category": "SHOUTBOX",
-      "author": {"username": "Zemke"},
+      "category": "NEWS",
+      "author": {"username": "BoolC"},
       "body": "BoolC,Taner,3,1",
       "newsType": "REPORT"
     }
     actual = node_runner.format(message)
-    self.assertEqual(
-        actual,
-        ["node", script + "/format.js", message["category"], 
-         message["author"]["username"], message["body"], message["newsType"]])
+    self.assertEqual(actual, node)
+    runner_args = ["node", script + "/format.js", message["category"],
+                   message["author"]["username"], message["body"],
+                   message["newsType"]]
+    node_runner.runner.assert_called_once_with(runner_args)
 
 
   def test_handle(self):
@@ -242,24 +253,25 @@ class NodeRunnerTest(unittest.TestCase):
         "The CWT bot commands are !cwtchat, !cwtdice, !cwthell, !cwtterrain, " \
         "!cwtwinners, !cwtcommands, !cwtschedule, !cwtplayoffs, " \
         "!cwtwhatisthisthing, !cwtrafkagrass, !cwturl, !cwtgithub."
-    def runner(arguments):
-      link = 'https://discord.com/channels/1234/12345'
-      self.assertEqual(
-          arguments,
-          ["node", script + "/handle.js", "DISCORD", link, "Zemke", "!cwtcommands"])
-      return "getting current tournament\n" \
-             "cmd !cwtcommands\n" \
-             "RES xx %s\n" % node
-    node_runner = NodeRunner(script, runner)
+    stdout = "getting current tournament\n" \
+           "cmd !cwtcommands\n" \
+           "RES xx %s\n" % node
+    node_runner = NodeRunner(script, self.create_runner_mock(stdout))
     actual = node_runner.handle("!cwtcommands", "Zemke", guildId, channelId)
     self.assertEqual(actual, node)
+    runner_args = ["node", script + "/handle.js", "DISCORD",
+                   'https://discord.com/channels/1234/12345',
+                   "Zemke", "!cwtcommands"]
+    node_runner.runner.assert_called_once_with(runner_args)
 
 
 class ListenerTest(unittest.TestCase):
 
   def test_listen(self):
     script = "./"
-    node_runner = NodeRunner(script, lambda x: x)
+    node_runner = Mock()
+    formatted = "Zemke via CWT: “Here is a message”"
+    node_runner.format = Mock(return_value=formatted)
     channel = "1234"
     endpoint = "http://example.com"
     client_mock = Mock()
@@ -278,17 +290,9 @@ class ListenerTest(unittest.TestCase):
     events = [Event(event="EVENT", data=json.dumps(message))]
     open_stream = type("SSEClient", (object,), {"events": lambda x: events })
     listener = Listener(client_mock, channel, node_runner, open_stream)
-
-    def cb_side_effect(channelId, content):
-      self.assertEqual(channelId, 1234)
-      self.assertEqual(
-          content,
-          ["node", script + "format.js", message["category"], 
-           message["author"]["username"], message["body"]])
-
-    cb_mock = Mock(side_effect=cb_side_effect)
+    cb_mock = Mock()
     listener.listen(1, cb_mock)
-    cb_mock.assert_called_once()
+    cb_mock.assert_called_once_with(int(channel), formatted)
 
 
 if __name__ == '__main__':
