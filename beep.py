@@ -140,6 +140,7 @@ class NodeRunner:
   def __init__(self, script, runner):
     self.script = script if script.endswith("/") else script + "/"
     self.runner = runner
+    logging.info('node -v %s', str(self.runner(["node", "-v"])))
 
 
   def handle(self, cmd, display_name, guild_id, channel_id):
