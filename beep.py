@@ -203,6 +203,7 @@ class EventHandler:
         result = self.node_runner.handle(
             cmd, message.author.display_name,
             message.channel.guild.id,  message.channel.id)
+        result = re.sub(r'\((https://cwtsite.com[\S]*)\)$', r'<\1>', result)
         logger.info("sending node result: %s", result)
         await message.channel.send(result)
       except:
