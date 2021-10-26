@@ -1,4 +1,5 @@
-# bot.py
+#!/usr/bin/env python
+
 from operator import itemgetter
 import os
 import re
