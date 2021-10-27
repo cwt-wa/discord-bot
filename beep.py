@@ -225,7 +225,7 @@ class EventHandler:
     if message.author == self.client.user:
       return
     cmd = message.content.strip()
-    logger.info("%s: %s", message.author.display_name, cmd)
+    logger.info("MSG %s: %s", message.author.display_name, cmd)
     if isinstance(message.channel, discord.DMChannel):
       logger.info("is direct message")
       await self.on_direct_message(message)
@@ -245,6 +245,7 @@ class EventHandler:
         logger.exception("error handling command")
 
   async def on_slash_command(self, ctx, message=None):
+    logger.info("on_slash_command %s %s", ctx.name, message)
     try:
       result = self.node_runner.handle(
           "!cwt" + ctx.name + (' ' + message if ctx.name == 'chat' else ""),
