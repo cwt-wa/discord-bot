@@ -1,4 +1,6 @@
 {
-  "wow": "yeah"
+    "name": "dice",
+    "type": 1,
+    "description": "Roll the dice"
 }
 
