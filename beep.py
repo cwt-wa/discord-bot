@@ -10,6 +10,8 @@ import json
 import logging
 import subprocess
 from subprocess import CalledProcessError
+from discord_slash import SlashCommand
+from discord_slash.utils.manage_commands import add_slash_command
 
 
 logging.basicConfig(level=logging.INFO)
@@ -182,10 +184,43 @@ class EventHandler:
 
   confirm_specific_channel = "Message has been sent to that specific channel."
 
-  def __init__(self, client, node_runner, channel_to_mirror_to):
+  descr = {
+    "chat": "Send a message to the chat on cwtsite.com.",
+    "dice": "Roll a dice.",
+    "hell": "How frequently has Hell terrain been used this year?",
+    "terrain": "Map terrain usage stats.",
+    "winners": "All CWT winners.",
+    "commands": "Just a list of all available bot commands.",
+    "schedule": "What are the currently scheduled games?",
+    "playoffs": "Current playoff tree.",
+    "whatisthisthing": "What is this thing?",
+    "rafkagrass": "How frequently has Rafka played grassy maps this year?",
+    "url": "What's the URL of the best website out there?",
+    "github": "CWT is open source!",
+  }
+  chat_opt = {
+    "name": "message",
+    "type": 3,
+    "required": True,
+    "description": "Content of your message."
+  }
+
+
+  def __init__(self, client, node_runner, channel_to_mirror_to, avail_cmds):
     self.client = client
     self.node_runner = node_runner
     self.channel_to_mirror_to = channel_to_mirror_to
+    self.slash = SlashCommand(self.client, sync_commands=True)
+    for cmd in avail_cmds: self.register_slash_command(cmd)
+
+  def register_slash_command(self, cmd):
+    self.slash.add_slash_command(
+      guild_ids=[777312324713185290],
+      cmd=self.on_slash_command,
+      options=[] if cmd != 'chat' else [self.chat_opt],
+      name=cmd,
+      description=self.descr[cmd])
+    logger.info("registered slash command: " + cmd)
 
   async def on_message(self, message):
     if message.author == self.client.user:
@@ -210,7 +245,18 @@ class EventHandler:
       except:
         logger.exception("error handling command")
 
+  async def on_slash_command(self, ctx, message=None):
+    try:
+      result = self.node_runner.handle(
+          "!cwt" + ctx.name + (' ' + message if ctx.name == 'chat' else ""),
+          ctx.author.display_name, ctx.guild_id,  ctx.channel.id)
+      await ctx.send(result or "I'm taking a nap. ZzzzZZz")
+    except:
+      logger.exception("error handling command")
+      await ctx.send("I'm taking a nap. zzzZZz")
+
   def register(self):
+
     @self.client.event
     async def on_ready():
       logger.info("ready")
@@ -218,7 +264,6 @@ class EventHandler:
     @self.client.event
     async def on_message(message):
       await self.on_message(message)
-
 
   async def on_direct_message(self, message):
     if message.author.id != zemke_id:
@@ -279,11 +324,19 @@ if __name__ == "__main__":
     return Listener(*args, node_runner, lambda: SSEClient(requests.get(endpoint, stream=True)))
 
   beepBoop = BeepBoop(
-      client = discord.Client(),
+      client = discord.Client(intents=discord.Intents.default()),
       getenv = os.getenv,
       listener_factory = listener_factory)
 
-  EventHandler(beepBoop.client, node_runner, beepBoop.env.channel).register()
+  avail_cmds = []
+  try:
+    avail_cmds_raw = node_runner.handle("!cwtcommands", "x", "y", "z")
+    logger.info("avail_cmds_raw " + str(avail_cmds_raw))
+    avail_cmds = [cmd[3:] for cmd in re.findall(r"!([A-Za-z]+),", avail_cmds_raw)]
+  except Exception as e:
+    logger.warn("couldn't get available commands", e)
+  logger.info("avail_cmds " + str(avail_cmds))
+  EventHandler(beepBoop.client, node_runner, beepBoop.env.channel, avail_cmds).register()
 
   beepBoop.client.run(beepBoop.env.token)
 
