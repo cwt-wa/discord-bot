@@ -215,7 +215,7 @@ class EventHandler:
 
   def register_slash_command(self, cmd):
     self.slash.add_slash_command(
-      guild_ids=[777312324713185290],
+      guild_ids=self.client.guilds,
       cmd=self.on_slash_command,
       options=[] if cmd != 'chat' else [self.chat_opt],
       name=cmd,
