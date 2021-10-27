@@ -11,7 +11,6 @@ import logging
 import subprocess
 from subprocess import CalledProcessError
 from discord_slash import SlashCommand
-from discord_slash.utils.manage_commands import add_slash_command
 
 
 logging.basicConfig(level=logging.INFO)
