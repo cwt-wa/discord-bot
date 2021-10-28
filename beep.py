@@ -26,6 +26,10 @@ class NodeRunnerError(Exception):
   pass
 
 
+def prevent_embed(s):
+  return re.sub(r'\((https://cwtsite.com[\S]*)\)$', r'<\1>', s)
+
+
 class Env:
   
   def __init__(self, getenv):
@@ -66,7 +70,7 @@ class BeepBoop:
 
 
   def send_message(self, channelId, message):
-    self.client.loop.create_task(self.client.get_channel(channelId).send(message))
+    self.client.loop.create_task(self.client.get_channel(channelId).send(prevent_embed(message)))
 
 
 class Listener:
@@ -238,8 +242,7 @@ class EventHandler:
         result = self.node_runner.handle(
             cmd, message.author.display_name,
             message.channel.guild.id,  message.channel.id)
-        result = re.sub(r'\((https://cwtsite.com[\S]*)\)$', r'<\1>', result)
-        logger.info("sending node result: %s", result)
+        logger.info("sending node result: %s", prevent_embed(result))
         await message.channel.send(result)
       except:
         logger.exception("error handling command")
