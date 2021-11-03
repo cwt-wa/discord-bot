@@ -120,7 +120,10 @@ class Listener:
     if data["id"] in self.posted[channelId]:
       logger.info('message already received %s', channelId)
     else:
-      if self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
+      if "newsType" in data and data["newsType"] == "DISCORD_MESSAGE" and \
+            re.search(r"\b%s\b" % channelId, data["body"].split(',')[1]):
+        logger.info('Discarding message sent from this same channel %s', str(channelId));
+      elif self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
         try:
           formatted = self.node_runner.format(data)
           logger.info('sending to channel %s: %s', str(channelId), str(formatted))
@@ -246,14 +249,16 @@ class EventHandler:
 
   async def on_slash_command(self, ctx, message=None):
     logger.info("on_slash_command %s %s", ctx.name, message)
+    err = "I'm taking a nap. ZzzzZZz"
     try:
+      chatcmd = ctx.name == 'chat'
       result = self.node_runner.handle(
-          "!cwt" + ctx.name + (' ' + message if ctx.name == 'chat' else ""),
+          "!cwt" + ctx.name + (' ' + message if chatcmd else ""),
           ctx.author.display_name, ctx.guild_id,  ctx.channel.id)
-      await ctx.send(result or "I'm taking a nap. ZzzzZZz")
+      await ctx.send(err if not result else message if chatcmd else result)
     except:
       logger.exception("error handling command")
-      await ctx.send("I'm taking a nap. zzzZZz")
+      await ctx.send(err + "Z")
 
   def register(self):
 
