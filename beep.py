@@ -120,10 +120,7 @@ class Listener:
     if data["id"] in self.posted[channelId]:
       logger.info('message already received %s', channelId)
     else:
-      if "newsType" in data and data["newsType"] == "DISCORD_MESSAGE" and \
-            re.search(r"\b%s\b" % channelId, data["body"].split(',')[1]): 
-        logger.info('Discarding message sent from this same channel %s', str(channelId));
-      elif self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
+      if self.channel_to_mirror_to is None or self.channel_to_mirror_to == channelId:
         try:
           formatted = self.node_runner.format(data)
           logger.info('sending to channel %s: %s', str(channelId), str(formatted))
