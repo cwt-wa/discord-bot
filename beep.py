@@ -337,7 +337,7 @@ if __name__ == "__main__":
   try:
     avail_cmds_raw = node_runner.handle("!cwtcommands", "x", "y", "z")
     logger.info("avail_cmds_raw " + str(avail_cmds_raw))
-    avail_cmds = [cmd[3:] for cmd in re.findall(r"!([A-Za-z]+),", avail_cmds_raw)]
+    avail_cmds = [cmd[3:] for cmd in re.findall(r"!([A-Za-z]+)[,.]", avail_cmds_raw)]
   except Exception as e:
     logger.warn("couldn't get available commands", e)
   logger.info("avail_cmds " + str(avail_cmds))
